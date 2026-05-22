@@ -9,4 +9,4 @@ def health_check():
 
 @app.post("/recommendations")
 def give_food_recommendation():
-    return {"Try Thai food tonight"}
+    return {"recommendation": "Try Thai food tonight"}
