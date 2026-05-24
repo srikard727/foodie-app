@@ -15,13 +15,6 @@ def health_check():
 
 @app.post("/recommendations")
 def give_food_recommendation(request: RecommendationRequest):
-<<<<<<< HEAD
-    best_food, best_score = analyze_text(request)
-    return {
-        "recommendation": f"Try {best_food['name']} tonight.",
-        "reason": "Matches your food request.",
-        "score": float(best_score)
-=======
     top_results = analyze_text(request)
 
     return {
@@ -34,7 +27,6 @@ def give_food_recommendation(request: RecommendationRequest):
             }
             for food, score in top_results
         ]
->>>>>>> 44021fd (Messed up a little with branches)
     }
 
 def analyze_text(request: RecommendationRequest):
@@ -70,10 +62,5 @@ def analyze_text(request: RecommendationRequest):
         reverse=True,
     )
 
-<<<<<<< HEAD
-    best_food, best_score = ranked_results[0]
-    return best_food, best_score
-=======
     top_three_results = ranked_results[:3]
     return top_three_results
->>>>>>> 44021fd (Messed up a little with branches)
