@@ -15,21 +15,28 @@ def health_check():
 
 @app.post("/recommendations")
 def give_food_recommendation(request: RecommendationRequest):
-    top_results = analyze_text(request)
+    top_results = rank_food_options(request)
+
+    best_food, best_score = top_results[0]
+    alternatives = top_results[1:]
 
     return {
-        "results": [
+        "recommendation": {
+            "name": best_food["name"],
+            "message": f"Try {best_food['name']} tonight.",
+            "score": float(best_score),
+        },
+        "alternatives": [
             {
                 "name": food["name"],
-                "recommendation": f"Try {food['name']} tonight.",
-                "reason": "Matches your food request.",
+                "reason": "Also matches your food request.",
                 "score": float(score),
             }
-            for food, score in top_results
-        ]
+            for food, score in alternatives
+        ],
     }
 
-def analyze_text(request: RecommendationRequest):
+def rank_food_options(request: RecommendationRequest):
     query_embedding = model.encode(request.message, convert_to_tensor=True)
 
     food_options = [
