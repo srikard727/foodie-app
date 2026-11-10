@@ -1,55 +1,37 @@
+import httpx
 from fastapi import FastAPI, HTTPException
 from app.schemas.recommendation import RecommendationRequest
 from app.services.recommendation_service import rank_restaurants
 
-app = FastAPI()
-
-
-def build_recommendation_response(restaurant: dict) -> dict:
-    return {
-        "name": restaurant["name"],
-        "latitude": restaurant["latitude"],
-        "longitude": restaurant["longitude"],
-        "rating": restaurant["rating"],
-        "price": restaurant["price"],
-        "address": restaurant["address"],
-        "image_url": restaurant["image_url"],
-        "score": restaurant["score"],
-    }
-
+app = FastAPI(title="Foodie Recommendation API", version="0.2.0")
 
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
 
-
 @app.post("/recommendations")
 def give_food_recommendation(request: RecommendationRequest):
     try:
-        top_results = rank_restaurants(
-            request.message,
-            request.latitude,
-            request.longitude,
-        )
+        results = rank_restaurants(request.message, request.latitude, request.longitude)
     except RuntimeError as error:
-        raise HTTPException(status_code=500, detail=str(error)) from error
+        raise HTTPException(status_code=503, detail="Restaurant recommendations are not configured.") from error
+    except httpx.HTTPStatusError as error:
+        raise HTTPException(status_code=502, detail="Restaurant provider returned an error.") from error
+    except httpx.RequestError as error:
+        raise HTTPException(status_code=502, detail="Restaurant provider is temporarily unavailable.") from error
 
-    if not top_results:
-        raise HTTPException(status_code=404, detail="No restaurant recommendations found.")
+    if not results:
+        raise HTTPException(status_code=404, detail="No matching restaurants found.")
 
-    best = top_results[0]
-    alternatives = top_results[1:]
-
+    best, *alternatives = results
     return {
         "recommendation": {
-            **build_recommendation_response(best),
-            "message": f"Try {best['name']} tonight.",
+            **best,
+            "message": f"Try {best['name']}. " + "; ".join(best["reasons"]) + ".",
         },
         "alternatives": [
-            {
-                **build_recommendation_response(food),
-                "reason": "Also matches your food request.",
-            }
-            for food in alternatives
+            {**place, "reason": "; ".join(place["reasons"]) + "."}
+            for place in alternatives
         ],
+        "model": "sentence-transformers/all-MiniLM-L6-v2",
     }
