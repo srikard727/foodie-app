@@ -4,16 +4,36 @@ from torch import nn
 from torchvision.models import efficientnet_v2_s, EfficientNet_V2_S_Weights
 
 
-class ConvBlock(nn.Sequential):
+class ConvBlock(nn.Module):
+    """Residual downsampling block with squeeze-and-excitation attention."""
+
     def __init__(self, in_ch: int, out_ch: int, stride: int = 1):
-        super().__init__(
+        super().__init__()
+        self.convs = nn.Sequential(
             nn.Conv2d(in_ch, out_ch, 3, stride=stride, padding=1, bias=False),
             nn.BatchNorm2d(out_ch),
             nn.SiLU(inplace=True),
             nn.Conv2d(out_ch, out_ch, 3, padding=1, bias=False),
             nn.BatchNorm2d(out_ch),
-            nn.SiLU(inplace=True),
         )
+        squeeze = max(8, out_ch // 8)
+        self.se = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Conv2d(out_ch, squeeze, 1),
+            nn.SiLU(inplace=True),
+            nn.Conv2d(squeeze, out_ch, 1),
+            nn.Sigmoid(),
+        )
+        self.skip = (
+            nn.Identity() if in_ch == out_ch and stride == 1 else
+            nn.Sequential(nn.Conv2d(in_ch, out_ch, 1, stride=stride, bias=False),
+                          nn.BatchNorm2d(out_ch))
+        )
+        self.act = nn.SiLU(inplace=True)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        features = self.convs(x)
+        return self.act(features * self.se(features) + self.skip(x))
 
 
 class CalorieCNN(nn.Module):
