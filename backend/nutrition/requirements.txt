@@ -1,0 +1,7 @@
+# Install a CUDA-compatible PyTorch/torchvision build for your GPU first.
+torch>=2.5
+torchvision>=0.20
+huggingface_hub>=0.27
+Pillow>=10
+numpy>=1.26
+matplotlib>=3.9
