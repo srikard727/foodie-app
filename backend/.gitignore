@@ -18,3 +18,10 @@ __pycache__/
 
 # Logs
 *.log
+
+# Nutrition5k source images and generated model outputs
+/data/
+/artifacts/
+*.pt
+*.pth
+*.ckpt
